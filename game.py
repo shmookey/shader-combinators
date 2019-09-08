@@ -105,8 +105,15 @@ def layers(xs):
 
 def translate(shader, x_offset, y_offset):
   """Shift the output of a shader by an offset."""
-  return lambda x,y,t: shader(x-x_offset, y-y_offset, t)
+  return lambda x, y, t, st: shader(x-x_offset, y-y_offset, t, st)
 
+def follow(shader, key, show_when_missing=False):
+  """Translate the output of a shader using a state variable with a given key."""
+  def follow_shader(x, y, t, st):
+    pos = st[key]
+    if pos: return shader(x - pos[0], y - pos[1], t, st)
+    else:   return white
+  return follow_shader
 
 #
 # APP LAUNCHER
@@ -157,7 +164,14 @@ def start_app(shader, update, state):
           return
         elif event.key == pygame.K_i:
           print(f"FPS: {fps}")
-
+      elif event.type == pygame.MOUSEBUTTONUP:
+        x = int(CANVAS_WIDTH * event.pos[0] / WINDOW_SIZE[0])
+        y = int(CANVAS_HEIGHT * event.pos[1] / WINDOW_SIZE[1])
+        events.append(("click", (x, y)))
+      elif event.type == pygame.MOUSEMOTION:
+        x = int(CANVAS_WIDTH * event.pos[0] / WINDOW_SIZE[0])
+        y = int(CANVAS_HEIGHT * event.pos[1] / WINDOW_SIZE[1])
+        events.append(("mousemove", (x, y)))
 
     update(state, time_elapsed, events)
 

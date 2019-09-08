@@ -3,6 +3,9 @@ from random import random
 
 WIDTH    = game.CANVAS_WIDTH
 HEIGHT   = game.CANVAS_HEIGHT
+
+speed    = 1  # maximum move distance per frame
+
 black    = (0,0,0)
 white    = (255,255,255)
 sky_blue = (135,206,235)
@@ -40,10 +43,12 @@ def update(state, time_elapsed, events):
 
   current_x  = state["x"]
   current_y  = state["y"]
-  movement_x = random()*4 - 2
-  movement_y = random()*4 - 2
-  state["x"] = current_x + movement_x
-  state["y"] = current_y + movement_y
+  movement_x = random()*speed*2 - speed
+  movement_y = random()*speed*2 - speed
+  new_x      = current_x + movement_x
+  new_y      = current_y + movement_y
+  state["x"] = max(0, min(WIDTH - 1, new_x))
+  state["y"] = max(0, min(HEIGHT - 1, new_y))
 
 
 run_app()
