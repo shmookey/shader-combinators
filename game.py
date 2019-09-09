@@ -7,11 +7,17 @@ from functools import reduce
 # CONSTANTS
 #
 
+FULLSCREEN = False
 #WINDOW_SIZE   = (720,405)
-#WINDOW_SIZE   = (1920,1080)
 WINDOW_SIZE   = (512, 512)
-CANVAS_HEIGHT = 96
-CANVAS_WIDTH  = 96
+#WINDOW_SIZE   = (1920,1080)
+#WINDOW_SIZE   = (480, 270)
+#CANVAS_WIDTH, CANVAS_HEIGHT = 64, 64
+#CANVAS_WIDTH, CANVAS_HEIGHT = 96, 54
+CANVAS_WIDTH, CANVAS_HEIGHT = 96, 96
+#CANVAS_WIDTH, CANVAS_HEIGHT = 9, 9
+#CANVAS_HEIGHT = 96
+#CANVAS_WIDTH  = 96
 #CANVAS_WIDTH  = 54
 MAX_FPS       = 60
 
@@ -69,15 +75,17 @@ def line(x1, y1, x2, y2, thickness, colour):
   if span == 0: 
     def shader(x, y, t, st):
       dx = abs(x - x1)
-      dy = (y - y1) * sgnY
-      if dx < thickness and dy <= abs(rise): return colour
+      dy = y - y1
+      if dx < thickness and (sign(dy) == sgnY or dy == 0) and sgnY*dy <= abs(rise): return colour
       else: return white
     return shader
  
   m = rise / span
   def shader(x, y, t, st):
     dx = x - x1
-    if dx < (0-thickness) or dx > (x2+thickness): return white
+    sgnDX = sign(dx)
+    if sgnX != sgnDX and sgnDX != 0: return white
+    if dx * sgnX > abs(span): return white
     ry = y1 + (dx * m)
     if abs(y-ry) < thickness: return colour
     else: return white
@@ -97,14 +105,20 @@ def compose(a, b):
    """
    def shader(x, y, t, st):
      colour_a = a(x, y, t, st)
-     colour_b = b(x, y, t, st)
-     return colour_a if colour_a != white else colour_b
+     return colour_a if colour_a != white else b(x, y, t, st)
 
    return shader
 
 def layers(xs):
   """Compose a list of shaders such that the first is on top."""
   return reduce(lambda acc, x: compose(acc, x), xs)
+
+def mask(stencil, cover):
+  def shader(x, y, t, st):
+    r = stencil(x, y, t, st)
+    if r == white: return white
+    else: return cover(x, y, t, st)
+  return shader
 
 
 #
@@ -132,11 +146,21 @@ def follow(shader, getter, axis='xy', force_tuple=False):
   """
 
   get_var = getter if type(getter) != type("") else lambda st: st[getter]
-  def get(st):
+  get_x = lambda st: get_var(st)
+  get_y = lambda st: get_var(st)
+  def get_x_tuple(st):
     var = get_var(st)
-    if var == None or axis == 'xy' or not force_tuple: return var
-    elif axis == 'x': return var[0]
-    elif axis == 'y': return var[1]
+    if not var: return None
+    else: return var[0]
+  def get_y_tuple(st):
+    var = get_var(st)
+    if not var: return None
+    else: return var[1]
+
+  get = get_var
+  if force_tuple and axis != 'xy':
+    if    axis == 'x': get = get_x_tuple
+    elif  axis == 'y': get = get_y_tuple
     else: raise Exception(f"bad axis value: {axis}")
 
   def shader_xy(x, y, t, st):
@@ -167,12 +191,10 @@ def rotate(shader, rotation):
         else getter_key)
 
   def shader_rotate(x, y, t, st):
-    h = sqrt(x**2 + y**2)
-    r = atan2(y, x)
-    r1 = r + get_rot(st)
-    x1 = round(cos(r1) * h)
-    y1 = round(sin(r1) * h)
-    return shader(x1, y1, t, st)
+    r  = get_rot(st)
+    xr = round(x*cos(r) - y*sin(r))
+    yr = round(x*sin(r) + y*cos(r))
+    return shader(xr, yr, t, st)
   return shader_rotate
 
 def tile(shader, width, height):
@@ -180,6 +202,30 @@ def tile(shader, width, height):
     return shader(x % width, y % height, t, st)
   return tiled_shader
 
+def pinch(shader, q):
+  getter_key  = lambda st: st[q]
+  getter_fn   = lambda st: q(st)
+  getter_none = lambda st: q
+  typ = type(q)
+  get_q   = (getter_none if typ == int or typ == float
+        else getter_fn   if typ == type(lambda x: x)
+        else getter_key)
+
+  def pinch_shader(x, y, t, st):
+    qq = get_q(st)
+    d  = sqrt(x**2 + y**2)
+    dn = sqrt(d) * qq
+    r  = atan2(y, x)
+    xr = dn * cos(r)
+    yr = dn * sin(r)
+    return shader(xr, yr, t, st)
+  return pinch_shader
+  return lambda x, y, t, st: shader(sign(x)*sqrt(abs(x))*q, sign(y)*sqrt(abs(y))*q, t, st)
+
+
+#
+#  COLOUR TRANSFORMS
+#
 
 def channel_filter(shader, rgbmin=(0,0,0), rgbmax=(255,255,255)):
   """Clamp colours to a particular range on a per-channel basis."""
@@ -210,7 +256,7 @@ def start_app(shader, update, state):
 
   # Initialize pygame, create surfaces and pixel array
   pygame.init()
-  window       = pygame.display.set_mode(WINDOW_SIZE)
+  window       = pygame.display.set_mode(WINDOW_SIZE, flags=(pygame.FULLSCREEN if FULLSCREEN else 0))
   canvas       = pygame.Surface((CANVAS_WIDTH,CANVAS_HEIGHT))
   frame        = pygame.Surface(WINDOW_SIZE)
   parray       = pygame.PixelArray(canvas)
@@ -266,9 +312,9 @@ def start_app(shader, update, state):
 
     # Count frames
     frame_number += 1
-    if frame_number % 100 == 0:
+    if frame_number % 20 == 0:
        period_duration = (current_time - fps_update_t) / 1000
-       fps = 100 / period_duration
+       fps = 20 / period_duration
        fps_update_t = current_time
 
 
