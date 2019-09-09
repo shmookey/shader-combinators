@@ -1,5 +1,5 @@
 import random, sys, pygame, traceback
-from math import sqrt
+from math import sqrt, sin, cos, atan2
 from functools import reduce
 
 
@@ -7,9 +7,9 @@ from functools import reduce
 # CONSTANTS
 #
 
-WINDOW_SIZE   = (512, 512)
-CANVAS_HEIGHT = 32
-CANVAS_WIDTH  = 32
+WINDOW_SIZE   = (960, 540)
+CANVAS_HEIGHT = 120
+CANVAS_WIDTH  = 67
 MAX_FPS       = 60
 
 
@@ -65,9 +65,9 @@ def line(x1, y1, x2, y2, thickness, colour):
   # Handle vertical lines specially to avoid divide-by-zero errors
   if span == 0: 
     def shader(x, y, t, st):
-      dx = (x - x1) * sgnX
+      dx = abs(x - x1)
       dy = (y - y1) * sgnY
-      if dx <= thickness and dy <= abs(rise): return colour
+      if dx < thickness and dy <= abs(rise): return colour
       else: return white
     return shader
  
@@ -103,17 +103,79 @@ def layers(xs):
   """Compose a list of shaders such that the first is on top."""
   return reduce(lambda acc, x: compose(acc, x), xs)
 
+
+#
+#  GEOMETRIC TRANSFORMS
+#
+
 def translate(shader, x_offset, y_offset):
   """Shift the output of a shader by an offset."""
   return lambda x, y, t, st: shader(x-x_offset, y-y_offset, t, st)
 
-def follow(shader, key, show_when_missing=False):
-  """Translate the output of a shader using a state variable with a given key."""
-  def follow_shader(x, y, t, st):
-    pos = st[key]
+def follow(shader, getter, axis='xy', force_tuple=False):
+  """Translate the output of a shader using a state accessor function.
+
+  If `getter` is a string, it is interpreted as a function that retrieves a
+  value with that string as its key from the state dict.
+
+  If `axis` is `xy`, `getter` should be a function that returns an (x,y) tuple
+  given the state dictionary, otherwise if it is `x` or `y`, it should return
+  an integer unless `force_tuple` is `True`, in which case an (x,y) tuple will
+  be expected and the appropriate `x` or `y` value selected automatically.
+  
+  The `force_tuple` option has no effect if `axis` is `xy`.
+
+  If `getter` returns `None`, the shader outputs white.
+  """
+
+  get_var = getter if type(getter) != type("") else lambda st: st[getter]
+  def get(st):
+    var = get_var(st)
+    if var == None or axis == 'xy' or not force_tuple: return var
+    elif axis == 'x': return var[0]
+    elif axis == 'y': return var[1]
+    else: raise Exception(f"bad axis value: {axis}")
+
+  def shader_xy(x, y, t, st):
+    pos = get(st)
     if pos: return shader(x - pos[0], y - pos[1], t, st)
     else:   return white
-  return follow_shader
+  def shader_x(x, y, t, st):
+    pos = get(st)
+    if pos: return shader(x - pos, y, t, st)
+    else:   return white
+  def shader_y(x, y, t, st):
+    pos = get(st)
+    if pos: return shader(x, y - pos, t, st)
+    else:   return white
+  
+  if axis == 'xy': return shader_xy
+  elif axis == 'x': return shader_x
+  elif axis == 'y': return shader_y
+  else: raise Exception(f"bad axis value: {axis}")
+
+def rotate(shader, rotation):
+  getter_key  = lambda st: st[rotation]
+  getter_fn   = lambda st: rotation(st)
+  getter_none = lambda st: rotation
+  typ = type(rotation)
+  get_rot = (getter_none if typ == int or typ == float
+        else getter_fn   if typ == type(lambda x: x)
+        else getter_key)
+
+  def shader_rotate(x, y, t, st):
+    h = sqrt(x**2 + y**2)
+    r = atan2(y, x)
+    r1 = r + get_rot(st)
+    x1 = round(cos(r1) * h)
+    y1 = round(sin(r1) * h)
+    return shader(x1, y1, t, st)
+  return shader_rotate
+
+def tile(shader, width, height):
+  def tiled_shader(x, y, t, st):
+    return shader(x % width, y % height, t, st)
+  return tiled_shader
 
 #
 # APP LAUNCHER
