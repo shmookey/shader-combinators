@@ -1,5 +1,6 @@
 import game
-from game import compose, line, translate, follow, tile, rotate, layers, point
+from game import line, rectangle, point
+from game import compose, translate, follow, tile, rotate, layers
 from game import black, white, blue, red, yellow, green, sky_blue, brown, dark_brown
 from math import sqrt, pi, sin, cos, atan2
 from random import random, randint
@@ -24,29 +25,47 @@ init_state = {
 }
 
 def app():
-  shape = translate(
-            rotate(
+  shape = (
+      translate(
+          rotate(
               layers([
-                line(-6, 0, 12, 0, 1, blue),
+                rectangle(-1, -1, 2, 2, yellow),
+                point(0, 6, red),
+                point(6, 0, red),
+                point(0, -6, red),
+                point(-6, 0, red),
+                line(-6, 0, 12, 0, 2, sky_blue),
                 line(0, -6, 0, 12, 1, blue)
               ]),
               "rot"
-            ),
-            6, 6)
-  scene = rotate(
-            follow(
+          ),
+          6, 6
+      )
+  )
+  scene = compose(
+      rotate(
+          follow(
               tile(shape, 12, 12),
               "drift_displacement"
-            ),
-            "scene_rot")
+          ),
+          "scene_rot"
+      ),
+      background
+  )
 
-  game.run(compose(scene,background), update, init_state)
+  game.run(scene, update, init_state)
 
 def background(x,y,t,st):
-  tt = t/60
-  p = tt % 512
-  pp = p if p < 256 else 512-p
-  return (pp,pp,255)
+  tr = t/60
+  tg = t/55
+  tb = t/65
+  pr = tr % 512
+  pg = tg % 512
+  pb = tb % 512
+  r = pr if pr < 256 else 511-pr
+  g = pg if pg < 256 else 511-pg
+  b = pb if pb < 256 else 511-pb
+  return (r, g, b)
 
 def update(state, time_elapsed, events):
   frame_time   = time_elapsed - state["last_frame"]

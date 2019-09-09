@@ -7,9 +7,12 @@ from functools import reduce
 # CONSTANTS
 #
 
-WINDOW_SIZE   = (720,405)
+#WINDOW_SIZE   = (720,405)
+#WINDOW_SIZE   = (1920,1080)
+WINDOW_SIZE   = (512, 512)
 CANVAS_HEIGHT = 96
-CANVAS_WIDTH  = 54
+CANVAS_WIDTH  = 96
+#CANVAS_WIDTH  = 54
 MAX_FPS       = 60
 
 
@@ -177,7 +180,19 @@ def tile(shader, width, height):
     return shader(x % width, y % height, t, st)
   return tiled_shader
 
-#
+
+def channel_filter(shader, rgbmin=(0,0,0), rgbmax=(255,255,255)):
+  """Clamp colours to a particular range on a per-channel basis."""
+  def filtered_shader(x, y, t, st):
+    orig = shader(x, y, t, st)
+    if orig == white: return white
+    return ( max(min(orig[0], rgbmax[0]), rgbmin[0]),
+             max(min(orig[1], rgbmax[1]), rgbmin[1]),
+             max(min(orig[2], rgbmax[2]), rgbmin[2])
+           )
+  return filtered_shader
+
+
 # APP LAUNCHER
 #
 
