@@ -1,0 +1,12 @@
+nothing to see here.
+
+requires python3 and pygame.
+
+the library is game.py
+
+these are runnable demos / tests:
+  - bug.py
+  - primitives.py
+  - cursor.py
+  - rotate.py
+
