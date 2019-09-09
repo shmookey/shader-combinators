@@ -7,9 +7,9 @@ from functools import reduce
 # CONSTANTS
 #
 
-WINDOW_SIZE   = (960, 540)
-CANVAS_HEIGHT = 120
-CANVAS_WIDTH  = 67
+WINDOW_SIZE   = (720,405)
+CANVAS_HEIGHT = 96
+CANVAS_WIDTH  = 54
 MAX_FPS       = 60
 
 

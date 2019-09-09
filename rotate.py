@@ -24,25 +24,21 @@ init_state = {
 }
 
 def app():
-  shape    = translate(
-               rotate(
-                 layers([
-                   line(-6, 0, 12, 0, 1, blue),
-                   line(0, -6, 0, 12, 1, blue)
-#                   point( 2,  2, yellow),
-#                   point( 2, -2, red),
-#                   point(-2,  2, green),
-#                   point(-2, -2, brown)
-                 ]),
-                 "rot"
-               ),
-               6, 6)
-  scene    = rotate(
-               follow(
-                 tile(shape, 12, 12),
-                 "drift_displacement"
-               ),
-               "scene_rot")
+  shape = translate(
+            rotate(
+              layers([
+                line(-6, 0, 12, 0, 1, blue),
+                line(0, -6, 0, 12, 1, blue)
+              ]),
+              "rot"
+            ),
+            6, 6)
+  scene = rotate(
+            follow(
+              tile(shape, 12, 12),
+              "drift_displacement"
+            ),
+            "scene_rot")
 
   game.run(compose(scene,background), update, init_state)
 

@@ -1,5 +1,7 @@
 import game
 from game import white, black, red, grey
+WIDTH = game.CANVAS_WIDTH
+HEIGHT = game.CANVAS_HEIGHT
 
 # Mouse events demo
 # Shows a block 'cursor' which follows the mouse
@@ -17,8 +19,8 @@ def app():
 
   # Create the cursor
   black_dot  = game.follow(game.point(0, 0, black), "cursor_position")
-  horiz_line = game.follow(game.line(0, 0, 32, 0, 1, grey), "cursor_position", axis='y', force_tuple=True)
-  vert_line  = game.follow(game.line(0, 0, 0, 32, 1, grey), "cursor_position", axis='x', force_tuple=True)
+  horiz_line = game.follow(game.line(0, 0, WIDTH, 0, 1, grey), "cursor_position", axis='y', force_tuple=True)
+  vert_line  = game.follow(game.line(0, 0, 0, HEIGHT, 1, grey), "cursor_position", axis='x', force_tuple=True)
   crosshair  = game.compose(horiz_line, vert_line)
   cursor     = game.compose(black_dot, crosshair)
 
