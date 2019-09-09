@@ -14,15 +14,16 @@ ACCEL_CHANCE = 0.25    # 1-second probabilty of an acceleration bump occuring
 ACCEL_BUMP   = 0.1     # How much to bump acceleration by
 DRAG         = 0.3     # % velocity reduction per second
 
-init_state = {
-  "rot": 0,
-  "scene_rot": 0,
-  "scene_rot_cw": True,
-  "drift_displacement": (0, 0),
-  "drift_velocity": (0, 0),
-  "drift_acceleration": (0, 0),
-  "last_frame": 0
-}
+class State:
+ rot = 0
+ scene_rot = 0
+ scene_rot_cw = True
+ drift_displacement = (0, 0)
+ drift_velocity = (0, 0)
+ drift_acceleration = (0, 0)
+ last_frame = 0
+
+init_state = State()
 
 def app():
   shape = (
@@ -37,7 +38,7 @@ def app():
                 line(-6, 0, 12, 0, 2, sky_blue),
                 line(0, -6, 0, 12, 1, blue)
               ]),
-              "rot"
+              lambda st: st.rot
           ),
           6, 6
       )
@@ -46,9 +47,9 @@ def app():
       rotate(
           follow(
               tile(shape, 12, 12),
-              "drift_displacement"
+              lambda st: st.drift_displacement
           ),
-          "scene_rot"
+          lambda st: st.scene_rot
       ),
       background
   )
@@ -68,43 +69,43 @@ def background(x,y,t,st):
   return (r, g, b)
 
 def update(state, time_elapsed, events):
-  frame_time   = time_elapsed - state["last_frame"]
+  frame_time   = time_elapsed - state.last_frame
   frame_time_s = frame_time / 1000 
   mins         = time_elapsed / 1000 / 60
 
   # increment the inner rotation
   turns = mins * RPM
-  state["rot"] = turns * pi * 2
+  state.rot = turns * pi * 2
 
   # increment the scene rotation
-  scene_rot_dir = 1 if state["scene_rot_cw"] else -1
+  scene_rot_dir = 1 if state.scene_rot_cw else -1
   turn_amt = (frame_time_s / 60) * SCENE_RPM * scene_rot_dir * pi * 2
-  state["scene_rot"] += turn_amt
+  state.scene_rot += turn_amt
 
   # roll the dice for a scene rotation direction change
   p_changedir = frame_time_s * SCENE_ROT_CHANGE_CHANCE
   if random() <= p_changedir:
-    state["scene_rot_cw"] = not state["scene_rot_cw"]
+    state.scene_rot_cw = not state.scene_rot_cw
 
   # roll the dice for an acceleration bump
-  cur_accel = state["drift_acceleration"]
+  cur_accel = state.drift_acceleration
   p_bump = frame_time_s * ACCEL_CHANCE
   if random() <= p_bump:
     direction = random() * 2 * pi
     new_accel = (cur_accel[0] + cos(direction)*ACCEL_BUMP, cur_accel[1] + sin(direction)*ACCEL_BUMP)
-    state["drift_acceleration"] = new_accel
+    state.drift_acceleration = new_accel
 
   # apply acceleration
-  cur_accel = state["drift_acceleration"]
-  cur_veloc = state["drift_velocity"]
+  cur_accel = state.drift_acceleration
+  cur_veloc = state.drift_velocity
   new_veloc = (cur_veloc[0] + cur_accel[0], cur_veloc[1] + cur_accel[1])
-  state["drift_velocity"] = new_veloc
+  state.drift_velocity = new_veloc
   
   # apply velocity
-  cur_displ = state["drift_displacement"]
-  cur_veloc = state["drift_velocity"]
+  cur_displ = state.drift_displacement
+  cur_veloc = state.drift_velocity
   new_displ = (cur_displ[0] + cur_veloc[0], cur_displ[1] + cur_veloc[1])
-  state["drift_displacement"] = new_displ
+  state.drift_displacement = new_displ
 
   # apply drag
   drag      = 1 - (DRAG * frame_time_s)
@@ -112,7 +113,7 @@ def update(state, time_elapsed, events):
   veloc_dir = atan2(cur_veloc[1], cur_veloc[0])
   new_speed = speed * drag
   new_veloc = (cos(veloc_dir) * new_speed, sin(veloc_dir) * new_speed)
-  state["drift_velocity"] = new_veloc
+  state.drift_velocity = new_veloc
 
   # decay acceleration
   decay     = ACCEL_DECAY * frame_time_s
@@ -120,9 +121,9 @@ def update(state, time_elapsed, events):
   accel_dir = atan2(cur_accel[1], cur_accel[0])
   new_magnt = diminish(accel_amt, decay)
   new_accel = (cos(accel_dir) * new_magnt, sin(accel_dir) * new_magnt)
-  state["drift_acceleration"] = new_accel
+  state.drift_acceleration = new_accel
 
-  state["last_frame"] = time_elapsed
+  state.last_frame = time_elapsed
 
 def diminish(n,amt):
   sgn = sign(n)
